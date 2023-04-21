@@ -1,0 +1,14 @@
+apiVersion: tutorials.github.com/v1
+kind: ConfigWatcher
+metadata:
+  labels:
+    app.kubernetes.io/name: configwatcher
+    app.kubernetes.io/instance: configwatcher-sample
+    app.kubernetes.io/part-of: configwatcher-go-operator
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/created-by: configwatcher-go-operator
+  name: configwatcher-sample
+spec:
+  configMap: webapp-config
+  podSelector:
+    app: webapp

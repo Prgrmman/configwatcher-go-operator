@@ -1,0 +1,19 @@
+domain: github.com
+layout:
+- go.kubebuilder.io/v3
+plugins:
+  manifests.sdk.operatorframework.io/v2: {}
+  scorecard.sdk.operatorframework.io/v2: {}
+projectName: configwatcher-go-operator
+repo: github.com/hsaid4327/configwatcher-go-operator
+resources:
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: github.com
+  group: tutorials
+  kind: ConfigWatcher
+  path: github.com/hsaid4327/configwatcher-go-operator/api/v1
+  version: v1
+version: "3"
