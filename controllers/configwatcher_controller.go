@@ -19,14 +19,18 @@ package controllers
 import (
 	"context"
 	tutorialsv1 "github.com/hsaid4327/configwatcher-go-operator/api/v1"
-	metav1 "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/event"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
 // ConfigWatcherReconciler reconciles a ConfigWatcher object
@@ -38,7 +42,7 @@ type ConfigWatcherReconciler struct {
 //+kubebuilder:rbac:groups=tutorials.github.com,resources=configwatchers,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=tutorials.github.com,resources=configwatchers/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=tutorials.github.com,resources=configwatchers/finalizers,verbs=update
-//+kubebuilder:rbac:groups=core,resources=pods,verbs=get;list;watch;delete
+//+kubebuilder:rbac:groups=core,resources=pods,verbs=get;list;watch;delete;deletecollection
 //+kubebuilder:rbac:groups=core,resources=configmaps,verbs=get;list;watch
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
@@ -57,83 +61,63 @@ func (r *ConfigWatcherReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	// Fetch the Memcached instance
 	// The purpose is check if the Custom Resource for the Kind configmap
 	// is present in the namespace on the cluster if not we return nil to stop the reconciliation
-	configMap := &metav1.ConfigMap{}
-	
-	err := r.Get(ctx, req.NamespacedName, configMap)
+	//configMap := &corev1.ConfigMap{}
+	//
+	//err := r.Get(ctx, req.NamespacedName, configMap)
+
+	configwatcher := &tutorialsv1.ConfigWatcher{}
+	err := r.Get(ctx, req.NamespacedName, configwatcher)
+	//err := r.Get(ctx, req.NamespacedName, configMap)
 	//configMap.
 	if err != nil {
 		if apierrors.IsNotFound(err) {
-			// If the configmap is not found then, it usually means that it was deleted or not created
+			// If the confiwatcher is not found then, it usually means that it was deleted or not created
 			// In this way, we will stop the reconciliation
-			log.Info("confimap resource not found")
+			log.Info("configwatcher resource not found")
+			return ctrl.Result{}, nil
+		}
+		// Error reading the object - requeue the request.
+		log.Error(err, "Failed to get configwatcher")
+		return ctrl.Result{}, err
+	}
+	configMapName := configwatcher.Spec.ConfigMap
+	configMap := &corev1.ConfigMap{}
+
+	err = r.Get(ctx, types.NamespacedName{Name: configMapName,
+		Namespace: configwatcher.Namespace}, configMap)
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			// If the custom resource is not found then, it usually means that it was deleted or not created
+			// In this way, we will stop the reconciliation
+			log.Info("configmap not found")
 			return ctrl.Result{}, nil
 		}
 		// Error reading the object - requeue the request.
 		log.Error(err, "Failed to get configmap")
 		return ctrl.Result{}, err
 	}
-	configwatcher := &tutorialsv1.ConfigWatcher{}
-	err = r.Get(ctx, req.NamespacedName, configwatcher)
+	// if we have reached that far it means pods have to be deleted
+	podSelector := configwatcher.Spec.PodSelector
+	err = deletePods(podSelector, ctx, req, r, configwatcher.Namespace)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
-			// If the custom resource is not found then, it usually means that it was deleted or not created
+			// If the configmap is not found then, it usually means that it was deleted or not created
 			// In this way, we will stop the reconciliation
-			log.Info("configwatcher CR resource not found")
+			log.Info("No pods in running state are found to delete")
 			return ctrl.Result{}, nil
 		}
 		// Error reading the object - requeue the request.
-		log.Error(err, "Failed to get ConfigWatcher")
+		log.Error(err, "Failed to delete pods ")
 		return ctrl.Result{}, err
 	}
-	configMapName := configwatcher.Spec.ConfigMap
-	// if this configmap is specified in CR
-	if configMapName == configMap.Name {
-		podSelector := configwatcher.Spec.PodSelector
-		err = deletePods(podSelector, ctx, req, r)
-		if err != nil {
-			if apierrors.IsNotFound(err) {
-				// If the configmap is not found then, it usually means that it was deleted or not created
-				// In this way, we will stop the reconciliation
-				log.Info("No pods in running state are found to delete")
-				return ctrl.Result{}, nil
-			}
-			// Error reading the object - requeue the request.
-			log.Error(err, "Failed to delete pods ")
-			return ctrl.Result{}, err
-		}
-
-	}
-
-	//
-	//if isConfigMapModified(configMapName) {
-	//	podSelector := configwatcher.Spec.PodSelector
-	//	deletePods(podSelector)
-	//}
-	//  if isConfigMapModified(configMap) {
-
-	//	}
 	return ctrl.Result{}, nil
 }
 
-func deletePods(podSelector map[string]string, ctx context.Context, req ctrl.Request, r *ConfigWatcherReconciler) error {
+func deletePods(podSelector map[string]string, ctx context.Context, req ctrl.Request, r *ConfigWatcherReconciler, namespace string) error {
 
-	//podList := &metav1.PodList{}
-	//opts := []client.ListOption{
-	//	client.InNamespace(req.NamespacedName.Namespace),
-	//	client.MatchingLabels{key: value},
-	//	client.MatchingFields{"status.phase": "Running"},
-	//}
-	//err := r.List(ctx, podList, opts...)
-	//if err != nil {
-	//	return err
-	//}
-	//items := podList.Items
-	//for _, pod := range items {
-	//	deletePod(pod, r, ctx)
-	//}
-	pod := &metav1.Pod{}
+	pod := &corev1.Pod{}
 	opts := []client.DeleteAllOfOption{
-		client.InNamespace(req.NamespacedName.Namespace),
+		client.InNamespace(namespace),
 		client.MatchingLabels(podSelector),
 		client.MatchingFields{"status.phase": "Running"},
 		client.GracePeriodSeconds(9),
@@ -146,11 +130,37 @@ func deletePods(podSelector map[string]string, ctx context.Context, req ctrl.Req
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *ConfigWatcherReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	return ctrl.NewControllerManagedBy(mgr).For(&metav1.ConfigMap{}).WithEventFilter(predicate.Funcs{
-		UpdateFunc: func(e event.UpdateEvent) bool {
-			return true
-		},
-	}).Complete(r)
-	//For(&tutorialsv1.ConfigWatcher{}).Complete(r)
 
+	return ctrl.NewControllerManagedBy(mgr).For(&tutorialsv1.ConfigWatcher{}).Watches(
+		&source.Kind{Type: &corev1.ConfigMap{}},
+		handler.EnqueueRequestsFromMapFunc(r.findCrWithReferenceToResource),
+		builder.WithPredicates(predicate.ResourceVersionChangedPredicate{}),
+	).Complete(r)
+}
+
+func (r *ConfigWatcherReconciler) findCrWithReferenceToResource(resource client.Object) []reconcile.Request {
+	log := log.FromContext(context.TODO())
+	deployed := &tutorialsv1.ConfigWatcherList{}
+	listOps := &client.ListOptions{
+		Namespace: resource.GetNamespace(),
+	}
+	requests := make([]reconcile.Request, 0)
+	if err := r.List(context.TODO(), deployed, listOps); err == nil {
+		for _, cr := range deployed.Items {
+			configMapName := cr.Spec.ConfigMap
+			if configMapName == resource.GetName() {
+				requests = append(requests, reconcile.Request{
+					NamespacedName: types.NamespacedName{
+						Name:      cr.GetName(),
+						Namespace: cr.GetNamespace(),
+					}})
+				break
+			}
+		}
+
+	}
+	if len(requests) > 0 {
+		log.Info("trigger reconcile on referenced resource version change", "resource", resource.GetName(), "ver", resource.GetResourceVersion(), "related crs", requests)
+	}
+	return requests
 }

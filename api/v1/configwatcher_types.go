@@ -17,7 +17,7 @@ limitations under the License.
 package v1
 
 import (
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	corev1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
@@ -43,8 +43,8 @@ type ConfigWatcherStatus struct {
 
 // ConfigWatcher is the Schema for the configwatchers API
 type ConfigWatcher struct {
-	metav1.TypeMeta   `json:",inline"`
-	metav1.ObjectMeta `json:"metadata,omitempty"`
+	corev1.TypeMeta   `json:",inline"`
+	corev1.ObjectMeta `json:"metadata,omitempty"`
 
 	Spec   ConfigWatcherSpec   `json:"spec,omitempty"`
 	Status ConfigWatcherStatus `json:"status,omitempty"`
@@ -54,8 +54,8 @@ type ConfigWatcher struct {
 
 // ConfigWatcherList contains a list of ConfigWatcher
 type ConfigWatcherList struct {
-	metav1.TypeMeta `json:",inline"`
-	metav1.ListMeta `json:"metadata,omitempty"`
+	corev1.TypeMeta `json:",inline"`
+	corev1.ListMeta `json:"metadata,omitempty"`
 	Items           []ConfigWatcher `json:"items"`
 }
 
