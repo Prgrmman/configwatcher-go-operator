@@ -1,8 +1,8 @@
 # configwatcher-go-operator
-// TODO(user): Add simple overview of use/purpose
+This project show cases how to implement a golang operator. It uses operator-sdk to initialize and build the project. The operator logic is based on a use case of application redeploying automatically when the configmap, which is mounted on the application, is updated. This is a common scenario that many applications encounter whereby a change in configmap does not automatically start an application and some manual intervention is required. This operator automate this common chore.
 
-## Description
-// TODO(user): An in-depth paragraph about your project and overview of use
+## Pre-requisites
+In order to run this 
 
 ## Getting Started
 You’ll need a Kubernetes cluster to run against. You can use [KIND](https://sigs.k8s.io/kind) to get a local cluster for testing, or run against a remote cluster.
@@ -16,11 +16,11 @@ kubectl apply -f config/samples/
 ```
 
 2. Build and push your image to the location specified by `IMG`:
-	
+
 ```sh
 make docker-build docker-push IMG=<some-registry>/configwatcher-go-operator:tag
 ```
-	
+
 3. Deploy the controller to the cluster with the image specified by `IMG`:
 
 ```sh
@@ -47,8 +47,8 @@ make undeploy
 ### How it works
 This project aims to follow the Kubernetes [Operator pattern](https://kubernetes.io/docs/concepts/extend-kubernetes/operator/)
 
-It uses [Controllers](https://kubernetes.io/docs/concepts/architecture/controller/) 
-which provides a reconcile function responsible for synchronizing resources untile the desired state is reached on the cluster 
+It uses [Controllers](https://kubernetes.io/docs/concepts/architecture/controller/)
+which provides a reconcile function responsible for synchronizing resources untile the desired state is reached on the cluster
 
 ### Test It Out
 1. Install the CRDs into the cluster:
@@ -91,4 +91,3 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
-
